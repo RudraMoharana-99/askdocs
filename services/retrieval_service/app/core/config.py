@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     version: str = "0.1.0"
     environment: str = "local"
     log_level: str = "INFO"
+    # Where Chroma persists. Relative to the service; gitignored already.
+    chroma_path: str = "data/chroma"
+    collection_name: str = "askdocs"
+    embedding_model: str = "BAAI/bge-small-en-v1.5"
     
 
 
