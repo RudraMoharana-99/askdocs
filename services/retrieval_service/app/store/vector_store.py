@@ -74,3 +74,13 @@ class VectorStore:
                 "score": 1.0 - distance,
             })
         return hits
+
+    def all_chunks(self) -> tuple[list[str], list[str]]:
+        """Return (chunk_ids, texts) for the whole collection.
+
+        Used to build the in-memory BM25 index at startup. This is the line
+        that forces the whole corpus into memory — fine at this scale, the
+        bottleneck if the corpus ever grows large."""
+
+        result = self._collection.get(include=["documents"])
+        return result["ids"], result["documents"]
