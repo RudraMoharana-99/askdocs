@@ -13,16 +13,14 @@ def _tokenize(text: str) -> list[str]:
 
 
 class BM25Store:
-    def __init__(self, chunk_ids: list[str], texts: list[str]) -> None:
+    def __init__(self, chunk_ids: list[str], texts: list[str], metadatas: list[dict]) -> None:
         # chunk_ids and texts are parallel: index i in the BM25 corpus maps
         # back to chunk_ids[i]. BM25 works on positions, so we keep this mapping
         # to translate a result position back to a real chunk_id.
         self._chunk_ids = chunk_ids
         self._texts = texts
-
-        tokenized_cropus = [_tokenize(t) for t in texts]
-        self._bm25 = BM25Okapi(tokenized_cropus)  # builds the inverted index
-
+        self._metadatas = metadatas
+        
         tokenized_cropus = [_tokenize(t) for t in texts]
         self._bm25 = BM25Okapi(tokenized_cropus)  #build the inverted index
 
@@ -33,7 +31,10 @@ class BM25Store:
         ranked = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:k]
 
         return [
-            {"chunk_id": self._chunk_ids[i], "content": self._texts[i],
-             "score": float(scores[i])}
+            {"chunk_id": self._chunk_ids[i],
+             "content": self._texts[i],
+             "metadata": self._metadatas[i],
+             "score": float(scores[i]),
+            }
              for i in ranked
         ]

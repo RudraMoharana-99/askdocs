@@ -1,23 +1,43 @@
 import logging
 import uuid
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 
-from app.api.routers import health
+from app.api.routers import health, retrieval
 from app.core.config import get_settings
 from app.core.context import request_id_var
 from app.core.logging import setup_logging
+from app.retrieval.factory import build_retriever
+from app.core.health import register_check
 
 
 # Order matters: config must load before logging is configured, and both
 # before the app object exists — otherwise startup logs use the wrong format.
 
-setting = get_settings()
-setup_logging(setting.service_name, setting.log_level)
-
+settings = get_settings()
+setup_logging(settings.service_name, settings.log_level)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title=setting.service_name, version=setting.version)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # STARTUP: build the expensive retriever once, stash on app.state.
+    logger.info("building_retriever")
+    app.state.retriever = build_retriever(settings=settings)
+    
+    async def _retriever_ready() -> None:
+        if getattr(app.state, "retriever", None) is None:
+            raise RuntimeError("retriever not built")
+
+    register_check("retriever", _retriever_ready)
+    logger.info("retriever_ready")
+
+    yield  # <- app service request here
+
+    # SHUTDOWN: nothing to clean up yet (Chroma persists itself).
+
+app = FastAPI(title=settings.service_name, version=settings.version, lifespan=lifespan)
 
 
 @app.middleware("http")
@@ -48,4 +68,5 @@ async def request_context_middleware(request: Request, call_next):
 
 
 app.include_router(health.router)
+app.include_router(retrieval.router)
 

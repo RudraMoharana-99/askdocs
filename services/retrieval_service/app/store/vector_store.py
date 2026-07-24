@@ -82,5 +82,6 @@ class VectorStore:
         that forces the whole corpus into memory — fine at this scale, the
         bottleneck if the corpus ever grows large."""
 
-        result = self._collection.get(include=["documents"])
-        return result["ids"], result["documents"]
+        result = self._collection.get(include=["documents", "metadatas"])
+        return result["ids"], result["documents"], result["metadatas"]
+    
